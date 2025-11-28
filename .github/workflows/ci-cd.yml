@@ -22,7 +22,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build Docker image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/miniapp-fastapi:latest .
+        run: docker build -t ghcr.io/andri-rj/miniapp-fastapi:latest .
 
       - name: Push Docker image
-        run: docker push ghcr.io/${{ github.repository_owner }}/miniapp-fastapi:latest
+        run: docker push ghcr.io/andri-rj/miniapp-fastapi:latest
