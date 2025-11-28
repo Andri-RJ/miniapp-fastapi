@@ -34,10 +34,8 @@ jobs:
 
     # 5️⃣ Déploiement sur K3s
     - name: Update K3s Deployment
-      env:
-        KUBECONFIG: ${{ secrets.K3S_KUBECONFIG }}  # ton k3s.yaml encodé en secret
       run: |
-        echo "${KUBECONFIG}" > kubeconfig.yaml
-        kubectl --kubeconfig kubeconfig.yaml set image deployment/miniapp-fastapi \
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl set image deployment/miniapp-fastapi \
           miniapp-fastapi=ghcr.io/andri-rj/miniapp-fastapi:latest
-        kubectl --kubeconfig kubeconfig.yaml rollout status deployment/miniapp-fastapi
+        kubectl rollout status deployment/miniapp-fastapi
