@@ -3,39 +3,41 @@ name: CI/CD - K3s Deployment
 on:
   push:
     branches:
-      - main   # ou ta branche principale
+      - main
 
 jobs:
   build-deploy:
     runs-on: self-hosted
 
     steps:
-    # 1️⃣ Récupérer le code
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # 2️⃣ Connexion à GitHub Container Registry
-    - name: Log in to GitHub Container Registry
+    - name: Log in to GHCR
       uses: docker/login-action@v2
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
-        password: ${{ secrets.GHCR_TOKEN }}  # ton token GitHub
+        password: ${{ secrets.GHCR_TOKEN }}
 
-    # 3️⃣ Build de l'image Docker
     - name: Build Docker image
       run: |
         docker build -t ghcr.io/andri-rj/miniapp-fastapi:latest .
 
-    # 4️⃣ Push de l'image vers GHCR
     - name: Push Docker image
       run: |
         docker push ghcr.io/andri-rj/miniapp-fastapi:latest
 
-    # 5️⃣ Déploiement sur K3s
-    - name: Update K3s Deployment
+    - name: Deploy to K3s
       run: |
         export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        
+        # 🔥 Force Kubernetes to pull the new "latest"
+        kubectl rollout restart deployment/miniapp-fastapi
+        
+        # 🔥 Reapply image tag (helps if pod restarts too fast)
         kubectl set image deployment/miniapp-fastapi \
           miniapp-fastapi=ghcr.io/andri-rj/miniapp-fastapi:latest
+        
+        # Wait for rollout
         kubectl rollout status deployment/miniapp-fastapi
