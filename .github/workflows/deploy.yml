@@ -1,0 +1,52 @@
+name: Fast K3s Deploy
+
+on:
+  push:
+    branches: [main]
+
+# Annuler builds précédents
+concurrency:
+  group: production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: self-hosted  # Votre runner dans K3s
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      # Pas de setup Python si déjà sur runner
+      
+      # Build optimisé avec cache
+      - name: Build Docker image
+        run: |
+          docker build \
+            --cache-from k3s-master:30500/fastapi-app:latest \
+            -t k3s-master:30500/fastapi-app:${{ github.sha }} \
+            -t k3s-master:30500/fastapi-app:latest \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            .
+      
+      # Push LOCAL (très rapide)
+      - name: Push to local registry
+        run: |
+          docker push k3s-master:30500/fastapi-app:${{ github.sha }}
+          docker push k3s-master:30500/fastapi-app:latest
+      
+      # Deploy direct sur K3s
+      - name: Deploy to K3s
+        run: |
+          kubectl set image deployment/fastapi-app \
+            fastapi-app=k3s-master:30500/fastapi-app:${{ github.sha }} \
+            -n production
+          
+          # Attendre le rollout
+          kubectl rollout status deployment/fastapi-app -n production --timeout=120s
+      
+      # Health check
+      - name: Verify deployment
+        run: |
+          sleep 5
+          curl -f http://fastapi-app.production.svc.cluster.local:8000/health || exit 1
